@@ -1,0 +1,63 @@
+:root { --bg:#0e0e12; --card:#17171f; --border:#2a2a38; --text:#e8e8ee; --muted:#8a8a9a; --accent:#5b8cff; --accent2:#7b5bff; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,'PingFang SC',sans-serif; line-height:1.6; }
+.page { max-width:760px; margin:0 auto; padding:20px 16px 80px; }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:8px 0 16px; }
+.brand { display:flex; align-items:center; gap:12px; }
+.logo { font-size:32px; }
+.bn { font-size:20px; font-weight:700; }
+.bs { font-size:12px; color:var(--muted); }
+.intro { font-size:13px; color:var(--muted); background:rgba(91,140,255,.07); padding:12px 14px; border-radius:10px; margin-bottom:16px; }
+.intro b { color:var(--text); }
+.steps { display:flex; gap:8px; margin-bottom:18px; }
+.stepTab { flex:1; padding:10px; border:1px solid var(--border); background:var(--card); color:var(--muted); border-radius:10px; cursor:pointer; font-size:13px; }
+.stepTab.on { border-color:var(--accent); color:var(--text); background:rgba(91,140,255,.1); }
+.btn { padding:10px 16px; border-radius:9px; border:none; cursor:pointer; font-size:14px; font-weight:500; }
+.btnPrimary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
+.btnGhost { background:transparent; border:1px solid var(--border); color:var(--text); }
+.btnSmall { padding:7px 12px; font-size:13px; }
+
+/* 建档 */
+.ppHint,.exHint,.soulSectionTitle { font-size:13px; color:var(--muted); margin-bottom:14px; }
+.ppHint b { color:var(--text); }
+.recogBox { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:18px; text-align:center; }
+.recogNote { font-size:12px; color:var(--accent); margin-top:10px; }
+.recogTip { font-size:12px; color:var(--muted); margin-top:8px; }
+.ppGrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.ppField { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.ppField.full { grid-column:1/-1; }
+.ppField label { font-size:13px; color:var(--muted); }
+.ppField input,.ppField textarea { padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0f0f15; color:var(--text); font-size:14px; font-family:inherit; resize:vertical; }
+
+/* 灵魂/人格 */
+.personaGrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+.personaCard { padding:16px; border:1.5px solid var(--border); background:var(--card); border-radius:12px; cursor:pointer; text-align:left; transition:.15s; }
+.personaCard:hover { border-color:var(--accent); }
+.personaCard.on { border-color:var(--accent); background:rgba(91,140,255,.1); }
+.pcEmoji { font-size:28px; }
+.pcName { font-size:16px; font-weight:600; margin:6px 0 4px; }
+.pcDesc { font-size:12px; color:var(--muted); }
+.personaSample { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+.psLabel { font-size:12px; color:var(--muted); }
+.psText { font-size:15px; margin-top:8px; line-height:1.7; }
+.soulToggle { background:none; border:none; color:var(--accent); cursor:pointer; font-size:13px; padding:8px 0; }
+.sliders { display:flex; flex-direction:column; gap:16px; padding:14px; background:var(--card); border-radius:10px; margin-bottom:14px; }
+.slider { display:flex; flex-direction:column; gap:6px; }
+.slLabel { display:flex; justify-content:space-between; font-size:13px; }
+.slVal { color:var(--accent); }
+.slider input[type=range] { width:100%; accent-color:var(--accent); }
+.slEnds { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
+.previewBox { text-align:center; padding:14px; background:rgba(123,91,255,.06); border-radius:10px; }
+.previewText { margin-top:12px; font-size:15px; line-height:1.7; padding:10px; background:var(--card); border-radius:8px; }
+
+/* 导出 */
+.exportPanel { display:flex; flex-direction:column; gap:16px; }
+.exSummary { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.exRow { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.exRow:last-child { border:none; }
+.exRow span { color:var(--muted); }
+.exActions { display:flex; gap:12px; }
+.exActions .btn { flex:1; }
+.exTip { font-size:12px; color:var(--muted); }
+.bottomNav { position:fixed; bottom:0; left:0; right:0; max-width:760px; margin:0 auto; padding:14px 16px; background:var(--bg); border-top:1px solid var(--border); display:flex; justify-content:space-between; gap:12px; }
+.bottomNav .btn { flex:1; }
