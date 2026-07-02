@@ -81,3 +81,16 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,'PingF
 .emptyHint { text-align:center; color:var(--muted); font-size:13px; padding:24px 0; }
 .backBtn { border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:13px; margin-right:4px; }
 .backBtn:hover { color:var(--text); border-color:var(--accent); }
+
+/* ===== ä¸»ä½“ç±»åž‹é€‰æ‹©ï¼ˆå››é€‰ä¸€ï¼‰===== */
+.subjectGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+.subjectCard { display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:18px 16px; background:var(--card); border:1px solid var(--border); border-radius:14px; cursor:pointer; text-align:left; transition:.15s; color:var(--text); }
+.subjectCard:hover { border-color:var(--accent); background:rgba(91,140,255,.08); }
+.scEmoji { font-size:30px; }
+.scName { font-size:15px; font-weight:700; }
+.scDesc { font-size:12px; color:var(--muted); line-height:1.5; }
+.subjectBar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; font-size:13px; }
+.sbCur { font-weight:700; }
+.sbDesc { color:var(--muted); flex:1; }
+.sbSwitch { border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:7px; padding:5px 10px; cursor:pointer; font-size:12px; }
+.sbSwitch:hover { color:var(--accent); border-color:var(--accent); }
