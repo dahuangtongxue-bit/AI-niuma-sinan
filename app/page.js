@@ -1,135 +1,165 @@
 'use client';
-import { useState, useRef } from 'react';
-import { SUBJECT_LIST, getSubject } from '@/lib/subjects';
+import { useState, useEffect } from 'react';
+import ProfilePanel from '@/components/ProfilePanel';
+import SoulPanel from '@/components/SoulPanel';
+import { buildDNA } from '@/lib/dna';
+import { tonesFromPersona, PERSONAS } from '@/lib/soul';
+import { migrateV1, listBrands, getBrand, saveBrand, deleteBrand, newBrandId } from '@/lib/brands';
+import { getSubject } from '@/lib/subjects';
 
-// 司南 · 事实层界面：先选主体类型（实体店/电商/品牌/个人IP），再按类型建真相档案
-export default function ProfilePanel({ profile, onChange, subjectType, onTypeChange }) {
-  const [recognizing, setRecognizing] = useState(false);
-  const [recogNote, setRecogNote] = useState('');
-  const fileRef = useRef(null);
+export default function Page() {
+  const [view, setView] = useState('list');     // list | edit
+  const [brands, setBrands] = useState([]);
+  const [editing, setEditing] = useState(null); // 当前编辑的品牌id
+  const [step, setStep] = useState(1);
+  const [profile, setProfile] = useState({});
+  const [subjectType, setSubjectType] = useState('');
+  const [personaId, setPersonaId] = useState('rexin');
+  const [tones, setTones] = useState(tonesFromPersona('rexin'));
+  const [saved, setSaved] = useState(false);
 
-  function set(key, val) { onChange({ ...profile, [key]: val }); }
-  function setList(key, str) { onChange({ ...profile, [key]: str.split('\n').map(s => s.trim()).filter(Boolean) }); }
+  useEffect(() => {
+    migrateV1();
+    setBrands(listBrands());
+  }, []);
 
-  // ============ 第一步：选主体类型 ============
-  if (!subjectType) {
+  function refresh() { setBrands(listBrands()); }
+
+  // —— 品牌库操作 ——
+  function openNew() {
+    setEditing(newBrandId());
+    setProfile({}); setPersonaId('rexin'); setTones(tonesFromPersona('rexin'));
+    setSubjectType('');
+    setStep(1); setView('edit');
+  }
+
+  function openEdit(id) {
+    const b = getBrand(id);
+    if (!b) return;
+    setEditing(id);
+    setProfile(b.profile || {});
+    setPersonaId(b.personaId || 'rexin');
+    setTones(b.tones || tonesFromPersona(b.personaId || 'rexin'));
+    setSubjectType(b.subjectType || 'store');
+    setStep(1); setView('edit');
+  }
+
+  function removeBrand(id, name) {
+    if (!confirm(`确定删除品牌「${name || '未命名'}」？该品牌的DNA配置将被移除。`)) return;
+    deleteBrand(id); refresh();
+  }
+
+  function exportBrandDNA(b) {
+    const dna = buildDNA({ profile: b.profile, personaId: b.personaId, tones: b.tones, subjectType: b.subjectType || 'store' });
+    const blob = new Blob([JSON.stringify(dna, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `品牌DNA_${b.profile?.name || '未命名'}.json`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  // —— 编辑态操作 ——
+  function onSoulChange({ personaId: pid, tones: t }) { setPersonaId(pid); setTones(t); }
+
+  function saveCurrent() {
+    saveBrand({ id: editing, profile, personaId, tones, subjectType: subjectType || 'store' });
+    refresh();
+    setSaved(true); setTimeout(() => setSaved(false), 1600);
+  }
+
+  function exportCurrent() {
+    saveCurrent();
+    exportBrandDNA({ profile, personaId, tones, subjectType: subjectType || 'store' });
+  }
+
+  const personaOf = (pid) => PERSONAS[pid] || PERSONAS.rexin;
+
+  // ======================= 品牌库（列表视图）=======================
+  if (view === 'list') {
     return (
-      <div className="profilePanel">
-        <div className="ppHint">
-          先告诉司南：<b>这个品牌是什么类型的主体</b>？不同类型的真相档案、发声视角完全不同——选对了，员工的内容才像"自己人"发的。
+      <div className="page">
+        <header className="topbar">
+          <div className="brand"><span className="logo">🧭</span><div><div className="bn">司南</div><div className="bs">品牌DNA中枢 · 数字员工总监</div></div></div>
+        </header>
+
+        <div className="intro">
+          这里是你所有客户品牌的<b>DNA 库</b>。每个品牌一份「真相 + 人格 + 调性」，
+          导出给阿桃 / 阿文 / 阿抖，全平台内容自动带上这个品牌的口吻——千牌千面，绝不串味。
         </div>
-        <div className="subjectGrid">
-          {SUBJECT_LIST.map((st) => (
-            <button key={st.id} className="subjectCard" onClick={() => onTypeChange(st.id)}>
-              <span className="scEmoji">{st.emoji}</span>
-              <span className="scName">{st.name}</span>
-              <span className="scDesc">{st.desc}</span>
-            </button>
-          ))}
+
+        <div className="brandGrid">
+          {brands.map((b) => {
+            const pe = personaOf(b.personaId);
+            return (
+              <div className="brandCard" key={b.id}>
+                <div className="bcHead">
+                  <span className="bcEmoji">{pe.emoji || '🏪'}</span>
+                  <div className="bcTitle">
+                    <div className="bcName">{b.profile?.name || '（未命名品牌）'}</div>
+                    <div className="bcMeta">{[getSubject(b.subjectType || 'store').emoji + getSubject(b.subjectType || 'store').name, b.profile?.category, pe.name].filter(Boolean).join(' · ')}</div>
+                  </div>
+                </div>
+                <div className="bcTime">更新于 {(b.updatedAt || '').slice(0, 10)}</div>
+                <div className="bcActions">
+                  <button className="btn btnGhost btnSm" onClick={() => openEdit(b.id)}>编辑</button>
+                  <button className="btn btnPrimary btnSm" onClick={() => exportBrandDNA(b)}>⬇ 导出DNA</button>
+                  <button className="btn btnDanger btnSm" onClick={() => removeBrand(b.id, b.profile?.name)}>删除</button>
+                </div>
+              </div>
+            );
+          })}
+          <button className="brandCard brandNew" onClick={openNew}>
+            <span className="bnPlus">＋</span>
+            <span>新建品牌</span>
+          </button>
         </div>
+
+        {brands.length === 0 && (
+          <div className="emptyHint">还没有品牌。点「新建品牌」建第一个客户的 DNA —— 填真相、选人格、调调性，三步搞定。</div>
+        )}
       </div>
     );
   }
 
-  // ============ 第二步：按类型建档 ============
-  const st = getSubject(subjectType);
-
-  async function onPickImages(e) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setRecognizing(true); setRecogNote('正在识别图片信息…');
-    try {
-      const dataUrls = [];
-      for (const f of files.slice(0, 4)) dataUrls.push(await fileToDataUrl(f));
-      const res = await fetch('/api/recognize', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: dataUrls, subjectType }),
-      });
-      const d = await res.json();
-      if (d.error) { setRecogNote('识别失败：' + d.error); }
-      else {
-        const merged = { ...d, ...Object.fromEntries(Object.entries(profile).filter(([k, v]) => v && (Array.isArray(v) ? v.length : true))) };
-        onChange({ ...d, ...merged });
-        setRecogNote('✓ 已识别并填入，请核对修正（AI识别可能有误，事实必须准确）');
-      }
-    } catch (err) { setRecogNote('识别出错：' + err.message); }
-    setRecognizing(false);
-    if (fileRef.current) fileRef.current.value = '';
-  }
-
-  const halfFields = st.fields.filter((f) => f.half);
-  const fullFields = st.fields.filter((f) => !f.half);
-
+  // ======================= 品牌编辑（三步流程）=======================
   return (
-    <div className="profilePanel">
-      {/* 当前类型 + 可换 */}
-      <div className="subjectBar">
-        <span className="sbCur">{st.emoji} {st.name}</span>
-        <span className="sbDesc">{st.desc}</span>
-        <button className="sbSwitch" onClick={() => { if (confirm('换类型后需按新类型重新核对档案，确定？')) onTypeChange(''); }}>换类型</button>
+    <div className="page">
+      <header className="topbar">
+        <div className="brand">
+          <button className="backBtn" onClick={() => { setView('list'); refresh(); }}>← 品牌库</button>
+          <span className="logo">🧭</span>
+          <div><div className="bn">{profile.name || '新品牌'}</div><div className="bs">编辑品牌 DNA</div></div>
+        </div>
+        <button className="btn btnGhost" onClick={saveCurrent}>{saved ? '✓ 已保存' : '保存'}</button>
+      </header>
+
+      <div className="steps">
+        <button className={`stepTab ${step === 1 ? 'on' : ''}`} onClick={() => setStep(1)}>① 品牌真相</button>
+        <button className={`stepTab ${step === 2 ? 'on' : ''}`} onClick={() => setStep(2)}>② 品牌人格</button>
+        <button className={`stepTab ${step === 3 ? 'on' : ''}`} onClick={() => setStep(3)}>③ 生成DNA</button>
       </div>
 
-      <div className="ppHint">
-        建立这个{st.name}的<b>真实档案</b>。这是所有员工（阿桃/阿文/阿抖）共享的事实来源——只填真实信息，绝不编造。
-      </div>
-
-      <div className="recogBox">
-        <input ref={fileRef} type="file" accept="image/*" multiple onChange={onPickImages} style={{ display: 'none' }} />
-        <button className="btn btnPrimary" onClick={() => fileRef.current?.click()} disabled={recognizing}>
-          📷 上传{st.recognizeHint}，自动识别建档
-        </button>
-        {recogNote && <div className="recogNote">{recogNote}</div>}
-        <div className="recogTip">或在下面手动填写。两种方式可结合：先识别，再核对修正。</div>
-      </div>
-
-      <div className="ppGrid">
-        {halfFields.map((f) => (
-          <Field key={f.key} label={f.label} v={profile[f.key]} onChange={(v) => set(f.key, v)} placeholder={f.placeholder} />
-        ))}
-      </div>
-      {fullFields.map((f) => {
-        if (f.kind === 'list') {
-          return <ListField key={f.key} label={f.label} v={profile[f.key]} onChange={(s2) => setList(f.key, s2)} placeholder={f.placeholder} />;
-        }
-        if (f.kind === 'long') {
-          return <LongField key={f.key} label={f.label} v={profile[f.key]} onChange={(v) => set(f.key, v)} placeholder={f.placeholder} />;
-        }
-        return <Field key={f.key} label={f.label} v={profile[f.key]} onChange={(v) => set(f.key, v)} placeholder={f.placeholder} full />;
-      })}
+      <main className="main">
+        {step === 1 && <ProfilePanel profile={profile} onChange={setProfile} subjectType={subjectType} onTypeChange={setSubjectType} />}
+        {step === 2 && <SoulPanel personaId={personaId} tones={tones} onChange={onSoulChange} />}
+        {step === 3 && (
+          <div className="exportPanel">
+            <div className="exHint">确认无误后，导出这个品牌的 DNA。导入到阿桃 / 阿文 / 阿抖后，员工就用这个品牌的口径和调性干活了。</div>
+            <div className="exSummary">
+              <div className="exRow"><span>类型</span><b>{getSubject(subjectType || 'store').emoji} {getSubject(subjectType || 'store').name}</b></div>
+              <div className="exRow"><span>品牌</span><b>{profile.name || '（未填）'}</b></div>
+              <div className="exRow"><span>品类</span><b>{profile.category || '（未填）'}</b></div>
+              <div className="exRow"><span>人格</span><b>{personaOf(personaId).emoji} {personaOf(personaId).name}</b></div>
+              <div className="exRow"><span>招牌</span><b>{(profile.signatures || []).join('、') || '（未填）'}</b></div>
+            </div>
+            <div className="exActions">
+              <button className="btn btnGhost" onClick={saveCurrent}>{saved ? '✓ 已保存' : '保存到品牌库'}</button>
+              <button className="btn btnPrimary" onClick={exportCurrent}>⬇ 导出品牌DNA（给员工导入）</button>
+            </div>
+            <div className="exTip">导出的 JSON 文件，在阿桃 / 阿文 / 阿抖页面顶部「品牌DNA」处导入。员工侧可同时装多个品牌、随时切换。</div>
+          </div>
+        )}
+      </main>
     </div>
   );
-}
-
-function Field({ label, v, onChange, placeholder, full }) {
-  return (
-    <div className={`ppField ${full ? 'full' : ''}`}>
-      <label>{label}</label>
-      <input value={v || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
-  );
-}
-function ListField({ label, v, onChange, placeholder }) {
-  return (
-    <div className="ppField full">
-      <label>{label}</label>
-      <textarea rows={3} value={(v || []).join('\n')} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
-  );
-}
-function LongField({ label, v, onChange, placeholder }) {
-  return (
-    <div className="ppField full">
-      <label>{label}</label>
-      <textarea rows={3} value={v || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
-  );
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
 }
