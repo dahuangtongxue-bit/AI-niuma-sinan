@@ -17,11 +17,28 @@ export default function Page() {
   const [personaId, setPersonaId] = useState('rexin');
   const [tones, setTones] = useState(tonesFromPersona('rexin'));
   const [saved, setSaved] = useState(false);
+  const [copiedId, setCopiedId] = useState('');
 
   useEffect(() => {
     migrateV1();
     setBrands(listBrands());
   }, []);
+
+  // 自动保存：编辑态下改任何内容，800ms后自动存进品牌库（不想要了删掉即可）
+  useEffect(() => {
+    if (view !== 'edit' || !editing) return;
+    const hasContent = subjectType || Object.keys(profile).some((k) => {
+      const v = profile[k];
+      return Array.isArray(v) ? v.length : v;
+    });
+    if (!hasContent) return;
+    const t = setTimeout(() => {
+      saveBrand({ id: editing, profile, personaId, tones, subjectType: subjectType || 'store' });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1200);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [view, editing, profile, personaId, tones, subjectType]);
 
   function refresh() { setBrands(listBrands()); }
 
@@ -47,6 +64,17 @@ export default function Page() {
   function removeBrand(id, name) {
     if (!confirm(`确定删除品牌「${name || '未命名'}」？该品牌的DNA配置将被移除。`)) return;
     deleteBrand(id); refresh();
+  }
+
+  async function copyBrandDNA(b) {
+    const dna = buildDNA({ profile: b.profile, personaId: b.personaId, tones: b.tones, subjectType: b.subjectType || 'store' });
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(dna));
+      setCopiedId(b.id || 'cur');
+      setTimeout(() => setCopiedId(''), 2200);
+    } catch (e) {
+      alert('复制失败（浏览器未授权剪贴板），请改用「导出DNA」文件方式');
+    }
   }
 
   function exportBrandDNA(b) {
@@ -102,7 +130,8 @@ export default function Page() {
                 <div className="bcTime">更新于 {(b.updatedAt || '').slice(0, 10)}</div>
                 <div className="bcActions">
                   <button className="btn btnGhost btnSm" onClick={() => openEdit(b.id)}>编辑</button>
-                  <button className="btn btnPrimary btnSm" onClick={() => exportBrandDNA(b)}>⬇ 导出DNA</button>
+                  <button className="btn btnPrimary btnSm" onClick={() => copyBrandDNA(b)}>{copiedId === b.id ? '✓ 已复制' : '📋 复制DNA'}</button>
+                  <button className="btn btnGhost btnSm" onClick={() => exportBrandDNA(b)}>⬇</button>
                   <button className="btn btnDanger btnSm" onClick={() => removeBrand(b.id, b.profile?.name)}>删除</button>
                 </div>
               </div>
@@ -130,7 +159,7 @@ export default function Page() {
           <span className="logo">🧭</span>
           <div><div className="bn">{profile.name || '新品牌'}</div><div className="bs">编辑品牌 DNA</div></div>
         </div>
-        <button className="btn btnGhost" onClick={saveCurrent}>{saved ? '✓ 已保存' : '保存'}</button>
+        <span className="bs" style={{ alignSelf: 'center' }}>{saved ? '✓ 已自动保存' : '编辑自动保存'}</span>
       </header>
 
       <div className="steps">
@@ -153,10 +182,10 @@ export default function Page() {
               <div className="exRow"><span>招牌</span><b>{(profile.signatures || []).join('、') || '（未填）'}</b></div>
             </div>
             <div className="exActions">
-              <button className="btn btnGhost" onClick={saveCurrent}>{saved ? '✓ 已保存' : '保存到品牌库'}</button>
-              <button className="btn btnPrimary" onClick={exportCurrent}>⬇ 导出品牌DNA（给员工导入）</button>
+              <button className="btn btnPrimary" onClick={() => copyBrandDNA({ id: 'cur', profile, personaId, tones, subjectType })}>{copiedId === 'cur' ? '✓ 已复制，去员工页粘贴' : '📋 复制DNA（推荐）'}</button>
+              <button className="btn btnGhost" onClick={exportCurrent}>⬇ 导出文件（备用）</button>
             </div>
-            <div className="exTip">导出的 JSON 文件，在阿桃 / 阿文 / 阿抖页面顶部「品牌DNA」处导入。员工侧可同时装多个品牌、随时切换。</div>
+            <div className="exTip">复制后，到阿桃 / 阿文 / 阿抖页面顶部「品牌DNA」条点「📋 粘贴导入」即可。编辑内容会自动保存，无需手动点保存。</div>
           </div>
         )}
       </main>
