@@ -1,8 +1,10 @@
 'use client';
 import { useState, useRef } from 'react';
+import { SUBJECT_LIST, getSubject } from '@/lib/subjects';
+import { extractDoc, ACCEPT } from '@/lib/docExtract';
 
-// 司南 · 事实层界面：建店铺档案（手动填 + 图片识别）
-export default function ProfilePanel({ profile, onChange }) {
+// 司南 · 事实层界面：先选主体类型（实体店/电商/品牌/个人IP），再按类型建真相档案
+export default function ProfilePanel({ profile, onChange, subjectType, onTypeChange }) {
   const [recognizing, setRecognizing] = useState(false);
   const [recogNote, setRecogNote] = useState('');
   const fileRef = useRef(null);
@@ -10,64 +12,110 @@ export default function ProfilePanel({ profile, onChange }) {
   function set(key, val) { onChange({ ...profile, [key]: val }); }
   function setList(key, str) { onChange({ ...profile, [key]: str.split('\n').map(s => s.trim()).filter(Boolean) }); }
 
-  // 图片识别建档：上传门头/菜单/点评截图 → 视觉模型提取店铺信息
-  async function onPickImages(e) {
+  // ============ 第一步：选主体类型 ============
+  if (!subjectType) {
+    return (
+      <div className="profilePanel">
+        <div className="ppHint">
+          先告诉司南：<b>这个品牌是什么类型的主体</b>？不同类型的真相档案、发声视角完全不同——选对了，员工的内容才像"自己人"发的。
+        </div>
+        <div className="subjectGrid">
+          {SUBJECT_LIST.map((st) => (
+            <button key={st.id} className="subjectCard" onClick={() => onTypeChange(st.id)}>
+              <span className="scEmoji">{st.emoji}</span>
+              <span className="scName">{st.name}</span>
+              <span className="scDesc">{st.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ============ 第二步：按类型建档 ============
+  const st = getSubject(subjectType);
+
+  async function onPickFiles(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setRecognizing(true); setRecogNote('正在识别图片里的店铺信息…');
+    setRecognizing(true); setRecogNote('正在读取资料…');
+    const images = [];   // 图片（含扫描版PDF转的页图）
+    const texts = [];    // 文档提取的文本
+    const fails = [];
     try {
-      const dataUrls = [];
-      for (const f of files.slice(0, 4)) {
-        dataUrls.push(await fileToDataUrl(f));
+      for (const f of files.slice(0, 8)) {
+        try {
+          if (f.type.startsWith('image/')) {
+            if (images.length < 4) images.push(await fileToDataUrl(f));
+          } else {
+            const r = await extractDoc(f);
+            if (r.kind === 'text' && r.content) texts.push({ name: r.name, content: r.content });
+            else if (r.kind === 'images') for (const u of r.images) { if (images.length < 4) images.push(u); }
+          }
+        } catch (err) { fails.push(`${f.name}（${err.message}）`); }
       }
+      if (!images.length && !texts.length) {
+        setRecogNote('✗ 没有可识别的内容' + (fails.length ? '：' + fails.join('；') : ''));
+        setRecognizing(false);
+        if (fileRef.current) fileRef.current.value = '';
+        return;
+      }
+      setRecogNote('正在识别资料里的信息…');
       const res = await fetch('/api/recognize', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: dataUrls }),
+        body: JSON.stringify({ images, texts, subjectType }),
       });
       const d = await res.json();
       if (d.error) { setRecogNote('识别失败：' + d.error); }
       else {
-        // 把识别到的字段合并进档案（不覆盖已填的）
         const merged = { ...d, ...Object.fromEntries(Object.entries(profile).filter(([k, v]) => v && (Array.isArray(v) ? v.length : true))) };
         onChange({ ...d, ...merged });
-        setRecogNote('✓ 已识别并填入，请核对修正（AI识别可能有误，事实必须准确）');
+        setRecogNote('✓ 已识别并填入，请核对修正（AI识别可能有误，事实必须准确）' + (fails.length ? `；部分文件未能读取：${fails.join('；')}` : ''));
       }
     } catch (err) { setRecogNote('识别出错：' + err.message); }
     setRecognizing(false);
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  const halfFields = st.fields.filter((f) => f.half);
+  const fullFields = st.fields.filter((f) => !f.half);
+
   return (
     <div className="profilePanel">
-      <div className="ppHint">
-        建立你家店的真实档案。这份档案是<b>所有员工（阿桃/阿文/阿抖）共享的事实来源</b>——只填真实信息，绝不编造。
+      {/* 当前类型 + 可换 */}
+      <div className="subjectBar">
+        <span className="sbCur">{st.emoji} {st.name}</span>
+        <span className="sbDesc">{st.desc}</span>
+        <button className="sbSwitch" onClick={() => { if (confirm('换类型后需按新类型重新核对档案，确定？')) onTypeChange(''); }}>换类型</button>
       </div>
 
-      {/* 图片识别建档 */}
+      <div className="ppHint">
+        建立这个{st.name}的<b>真实档案</b>。这是所有员工（阿桃/阿文/阿抖）共享的事实来源——只填真实信息，绝不编造。
+      </div>
+
       <div className="recogBox">
-        <input ref={fileRef} type="file" accept="image/*" multiple onChange={onPickImages} style={{ display: 'none' }} />
+        <input ref={fileRef} type="file" accept={ACCEPT} multiple onChange={onPickFiles} style={{ display: 'none' }} />
         <button className="btn btnPrimary" onClick={() => fileRef.current?.click()} disabled={recognizing}>
-          📷 上传门头/菜单/点评截图，自动识别建档
+          📎 上传{st.recognizeHint}，自动识别建档
         </button>
         {recogNote && <div className="recogNote">{recogNote}</div>}
-        <div className="recogTip">或在下面手动填写。两种方式可结合：先识别，再核对修正。</div>
+        <div className="recogTip">支持 图片 / PDF / Word / Excel / PPT / txt，可多选混传。或在下面手动填写——两种方式可结合：先识别，再核对修正。</div>
       </div>
 
-      {/* 手动填写 */}
       <div className="ppGrid">
-        <Field label="店名" v={profile.name} onChange={(v) => set('name', v)} placeholder="招牌上的正式名称" />
-        <Field label="品类" v={profile.category} onChange={(v) => set('category', v)} placeholder="如 兰州牛肉面 / 咖啡馆" />
-        <Field label="城市" v={profile.city} onChange={(v) => set('city', v)} placeholder="如 苏州" />
-        <Field label="商圈/地址" v={profile.area} onChange={(v) => set('area', v)} placeholder="至少到街道或商圈" />
-        <Field label="人均" v={profile.perCapita} onChange={(v) => set('perCapita', v)} placeholder="如 25元" />
-        <Field label="营业时间" v={profile.hours} onChange={(v) => set('hours', v)} placeholder="如 10:00-22:00" />
+        {halfFields.map((f) => (
+          <Field key={f.key} label={f.label} v={profile[f.key]} onChange={(v) => set(f.key, v)} placeholder={f.placeholder} />
+        ))}
       </div>
-      <Field label="老板/品牌人设（一句话）" v={profile.persona} onChange={(v) => set('persona', v)} placeholder="如 在苏州开店的兰州人，做正宗牛大" full />
-      <ListField label="真实招牌（每行一个，带真实细节）" v={profile.signatures} onChange={(s) => setList('signatures', s)} placeholder={"汤每天凌晨现熬\n牛肉现切\n面分九种粗细"} />
-      <ListField label="真实差异点（和同行不一样的地方）" v={profile.differentiators} onChange={(s) => setList('differentiators', s)} placeholder={"老板亲自拉面\n不用浓汤宝"} />
-      <ListField label="可拍的真实亮点/故事" v={profile.highlights} onChange={(s) => setList('highlights', s)} placeholder={"凌晨四点熬汤的过程\n二十年老手艺"} />
-      <Field label="引流/到店信息" v={profile.landing} onChange={(v) => set('landing', v)} placeholder="地址定位、预约/排队方式、私域入口" full />
-      <Field label="⚠️ 禁止夸大的提醒（如有）" v={profile.taboo} onChange={(v) => set('taboo', v)} placeholder="如 别写'全城第一''最好吃'" full />
+      {fullFields.map((f) => {
+        if (f.kind === 'list') {
+          return <ListField key={f.key} label={f.label} v={profile[f.key]} onChange={(s2) => setList(f.key, s2)} placeholder={f.placeholder} />;
+        }
+        if (f.kind === 'long') {
+          return <LongField key={f.key} label={f.label} v={profile[f.key]} onChange={(v) => set(f.key, v)} placeholder={f.placeholder} />;
+        }
+        return <Field key={f.key} label={f.label} v={profile[f.key]} onChange={(v) => set(f.key, v)} placeholder={f.placeholder} full />;
+      })}
     </div>
   );
 }
@@ -85,6 +133,14 @@ function ListField({ label, v, onChange, placeholder }) {
     <div className="ppField full">
       <label>{label}</label>
       <textarea rows={3} value={(v || []).join('\n')} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    </div>
+  );
+}
+function LongField({ label, v, onChange, placeholder }) {
+  return (
+    <div className="ppField full">
+      <label>{label}</label>
+      <textarea rows={3} value={v || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
     </div>
   );
 }
