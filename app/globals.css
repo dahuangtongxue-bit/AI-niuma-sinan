@@ -17,7 +17,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,'PingF
 .btnGhost { background:transparent; border:1px solid var(--border); color:var(--text); }
 .btnSmall { padding:7px 12px; font-size:13px; }
 
-/* 建档 */
+/* å»ºæ¡£ */
 .ppHint,.exHint,.soulSectionTitle { font-size:13px; color:var(--muted); margin-bottom:14px; }
 .ppHint b { color:var(--text); }
 .recogBox { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:18px; text-align:center; }
@@ -29,7 +29,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,'PingF
 .ppField label { font-size:13px; color:var(--muted); }
 .ppField input,.ppField textarea { padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0f0f15; color:var(--text); font-size:14px; font-family:inherit; resize:vertical; }
 
-/* 灵魂/人格 */
+/* çµé­‚/äººæ ¼ */
 .personaGrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
 .personaCard { padding:16px; border:1.5px solid var(--border); background:var(--card); border-radius:12px; cursor:pointer; text-align:left; transition:.15s; }
 .personaCard:hover { border-color:var(--accent); }
@@ -50,7 +50,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,'PingF
 .previewBox { text-align:center; padding:14px; background:rgba(123,91,255,.06); border-radius:10px; }
 .previewText { margin-top:12px; font-size:15px; line-height:1.7; padding:10px; background:var(--card); border-radius:8px; }
 
-/* 导出 */
+/* å¯¼å‡º */
 .exportPanel { display:flex; flex-direction:column; gap:16px; }
 .exSummary { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
 .exRow { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px; }
@@ -61,3 +61,23 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,'PingF
 .exTip { font-size:12px; color:var(--muted); }
 .bottomNav { position:fixed; bottom:0; left:0; right:0; max-width:760px; margin:0 auto; padding:14px 16px; background:var(--bg); border-top:1px solid var(--border); display:flex; justify-content:space-between; gap:12px; }
 .bottomNav .btn { flex:1; }
+
+/* ===== v2 Â· å“ç‰Œåº“ ===== */
+.brandGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-bottom:16px; }
+.brandCard { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+.bcHead { display:flex; align-items:center; gap:10px; }
+.bcEmoji { font-size:28px; }
+.bcTitle { min-width:0; }
+.bcName { font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bcMeta { font-size:12px; color:var(--muted); }
+.bcTime { font-size:11px; color:var(--muted); }
+.bcActions { display:flex; gap:6px; flex-wrap:wrap; }
+.btnSm { padding:6px 10px; font-size:12px; border-radius:8px; }
+.btnDanger { background:transparent; border:1px solid #5a2a35; color:#e07a8b; }
+.btnDanger:hover { background:rgba(224,122,139,.08); }
+.brandNew { align-items:center; justify-content:center; gap:6px; border-style:dashed; color:var(--muted); cursor:pointer; min-height:130px; font-size:14px; background:transparent; }
+.brandNew:hover { border-color:var(--accent); color:var(--accent); }
+.bnPlus { font-size:30px; line-height:1; }
+.emptyHint { text-align:center; color:var(--muted); font-size:13px; padding:24px 0; }
+.backBtn { border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:13px; margin-right:4px; }
+.backBtn:hover { color:var(--text); border-color:var(--accent); }
