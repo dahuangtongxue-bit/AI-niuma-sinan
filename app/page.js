@@ -5,6 +5,7 @@ import SoulPanel from '@/components/SoulPanel';
 import { buildDNA } from '@/lib/dna';
 import { tonesFromPersona, PERSONAS } from '@/lib/soul';
 import { migrateV1, listBrands, getBrand, saveBrand, deleteBrand, newBrandId } from '@/lib/brands';
+import { getSubject } from '@/lib/subjects';
 
 export default function Page() {
   const [view, setView] = useState('list');     // list | edit
@@ -12,6 +13,7 @@ export default function Page() {
   const [editing, setEditing] = useState(null); // 当前编辑的品牌id
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState({});
+  const [subjectType, setSubjectType] = useState('');
   const [personaId, setPersonaId] = useState('rexin');
   const [tones, setTones] = useState(tonesFromPersona('rexin'));
   const [saved, setSaved] = useState(false);
@@ -27,6 +29,7 @@ export default function Page() {
   function openNew() {
     setEditing(newBrandId());
     setProfile({}); setPersonaId('rexin'); setTones(tonesFromPersona('rexin'));
+    setSubjectType('');
     setStep(1); setView('edit');
   }
 
@@ -37,6 +40,7 @@ export default function Page() {
     setProfile(b.profile || {});
     setPersonaId(b.personaId || 'rexin');
     setTones(b.tones || tonesFromPersona(b.personaId || 'rexin'));
+    setSubjectType(b.subjectType || 'store');
     setStep(1); setView('edit');
   }
 
@@ -46,7 +50,7 @@ export default function Page() {
   }
 
   function exportBrandDNA(b) {
-    const dna = buildDNA({ profile: b.profile, personaId: b.personaId, tones: b.tones });
+    const dna = buildDNA({ profile: b.profile, personaId: b.personaId, tones: b.tones, subjectType: b.subjectType || 'store' });
     const blob = new Blob([JSON.stringify(dna, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -58,14 +62,14 @@ export default function Page() {
   function onSoulChange({ personaId: pid, tones: t }) { setPersonaId(pid); setTones(t); }
 
   function saveCurrent() {
-    saveBrand({ id: editing, profile, personaId, tones });
+    saveBrand({ id: editing, profile, personaId, tones, subjectType: subjectType || 'store' });
     refresh();
     setSaved(true); setTimeout(() => setSaved(false), 1600);
   }
 
   function exportCurrent() {
     saveCurrent();
-    exportBrandDNA({ profile, personaId, tones });
+    exportBrandDNA({ profile, personaId, tones, subjectType: subjectType || 'store' });
   }
 
   const personaOf = (pid) => PERSONAS[pid] || PERSONAS.rexin;
@@ -92,7 +96,7 @@ export default function Page() {
                   <span className="bcEmoji">{pe.emoji || '🏪'}</span>
                   <div className="bcTitle">
                     <div className="bcName">{b.profile?.name || '（未命名品牌）'}</div>
-                    <div className="bcMeta">{[b.profile?.category, pe.name].filter(Boolean).join(' · ')}</div>
+                    <div className="bcMeta">{[getSubject(b.subjectType || 'store').emoji + getSubject(b.subjectType || 'store').name, b.profile?.category, pe.name].filter(Boolean).join(' · ')}</div>
                   </div>
                 </div>
                 <div className="bcTime">更新于 {(b.updatedAt || '').slice(0, 10)}</div>
@@ -136,12 +140,13 @@ export default function Page() {
       </div>
 
       <main className="main">
-        {step === 1 && <ProfilePanel profile={profile} onChange={setProfile} />}
+        {step === 1 && <ProfilePanel profile={profile} onChange={setProfile} subjectType={subjectType} onTypeChange={setSubjectType} />}
         {step === 2 && <SoulPanel personaId={personaId} tones={tones} onChange={onSoulChange} />}
         {step === 3 && (
           <div className="exportPanel">
             <div className="exHint">确认无误后，导出这个品牌的 DNA。导入到阿桃 / 阿文 / 阿抖后，员工就用这个品牌的口径和调性干活了。</div>
             <div className="exSummary">
+              <div className="exRow"><span>类型</span><b>{getSubject(subjectType || 'store').emoji} {getSubject(subjectType || 'store').name}</b></div>
               <div className="exRow"><span>品牌</span><b>{profile.name || '（未填）'}</b></div>
               <div className="exRow"><span>品类</span><b>{profile.category || '（未填）'}</b></div>
               <div className="exRow"><span>人格</span><b>{personaOf(personaId).emoji} {personaOf(personaId).name}</b></div>
